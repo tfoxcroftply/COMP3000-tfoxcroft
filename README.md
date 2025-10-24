@@ -1,6 +1,6 @@
 COMP3000 2025/2026
 
-## "Agricultural Monitoring Network and Interface"
+## "TemperatureNet - Agricultural Monitoring Network and Interface"
 
 Supervisor: Fatma Bouabdallah
 
