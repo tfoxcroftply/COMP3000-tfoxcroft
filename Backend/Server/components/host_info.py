@@ -1,7 +1,7 @@
 import os
 from components.print import vPrint
 
-def getHostType():
+def getHostType() -> str:
     Filename = "/proc/device-tree/model"
     if os.path.exists(Filename):
         try:
@@ -12,6 +12,7 @@ def getHostType():
             vPrint("Unable to identify host type.")
     return "Unknown"
 
-def isHostValid():
+def isHostValid() -> bool:
     if getHostType() != "Unknown":
         return True
+    return False
