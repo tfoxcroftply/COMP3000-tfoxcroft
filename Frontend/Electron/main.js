@@ -9,8 +9,8 @@ let hostIp = -1; // server tracking, might change method
 
 const createWindow = () => {
     const window = new BrowserWindow({
-        width: 800,
-        height: 600,
+        width: 960,
+        height: 720,
         resizable: false,
         webPreferences: {
             nodeIntegration: false,

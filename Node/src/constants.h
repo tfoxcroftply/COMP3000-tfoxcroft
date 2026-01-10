@@ -1,0 +1,10 @@
+#pragma once
+
+#define SERIAL_RATE 115200
+#define SERIAL_BUFFER_SIZE 32
+#define SERIAL_COMMAND_MAX_SIZE 32
+
+#define LED_PIN 2
+#define DHT_PIN 4
+
+#define USB_MODE_TICK_SPEED 100

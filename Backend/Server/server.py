@@ -2,26 +2,33 @@ import os
 import time
 
 # custom imports
-from components.print import vPrint
-from components.host_info import isHostValid,getHostType
+from components.container import Container
+
 from components.database import Database
 from components.api import Api
+from components.node_manager import NodeManager
+
+from components.print import vPrint
+from components.host_info import isHostValid,getHostType
 
 debug = True
 
 if __name__ == "__main__":
     vPrint("Server starting.")
 
-    if not isHostValid() or debug == True:
-        Debug = True
-        vPrint("Development environment detected.")
+    container = Container()
+    if isHostValid() == False or debug == True:
+        container.config.debug = True
+        vPrint("Debug mode enabled.")
 
-    database = Database()
-    database.start(os.path.dirname(os.path.abspath(__file__)))
+    container.database = Database(container)
+    container.database.start(os.path.dirname(os.path.abspath(__file__)))
     
-    api = Api(database) # move to a dependency injection object
-    api.start(80)
+    container.api = Api(container)
+    container.api.start(80)
+
+    container.node_manager = NodeManager(container)
+    container.node_manager.start()
 
     while True:
-        time.sleep(10) # logic loop
-
+        time.sleep(10) # logic loop here

@@ -5,13 +5,13 @@ export default function Loading() {
     const navigate = useNavigate();
 
     useEffect(() => {
-        const temptimer = setTimeout(() => { // for testing
+        const tempTimer = setTimeout(() => { // for testing
             navigate("/home");
         }, 2000);
 
         window.electron.discover();
 
-        return () => clearTimeout(temptimer);
+        return () => clearTimeout(tempTimer);
     },[navigate])
     return (
         <div className="flex-1 flex flex-col items-center justify-center space-y-10">

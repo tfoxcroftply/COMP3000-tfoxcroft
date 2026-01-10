@@ -1,5 +1,6 @@
-import "../components/Chart"
 import { Line } from "react-chartjs-2"
+
+import "../components/Chart"
 
 const test = {
     labels: ["test","test"],
@@ -14,14 +15,14 @@ const test = {
 export default function Home() {
   return (
     <>
-      <h1 className="title">Dashboard</h1>
       <div>
         <Line data={test} options={{
           plugins: {
-          legend: {
-          display: false
-        }
-        }}} />
+            legend: {
+              display: false
+            }
+          }
+        }} />
       </div>
     </>
 
