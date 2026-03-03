@@ -1,18 +1,16 @@
 import os
-from components.print import vPrint
+from components.print import vprint
 
-def getHostType() -> str:
-    Filename = "/proc/device-tree/model"
-    if os.path.exists(Filename):
+def get_host_type() -> str | None:
+    path_name = "/proc/device-tree/model"
+    if os.path.exists(path_name):
         try:
-            with open(Filename) as f:
+            with open(path_name) as f:
                 model = f.read().strip()
             return model
         except Exception:
-            vPrint("Unable to identify host type.")
-    return "Unknown"
+            vprint(f"Unable to identify host hardware.", error=True)
+    return None
 
-def isHostValid() -> bool:
-    if getHostType() != "Unknown":
-        return True
-    return False
+def is_host_valid() -> bool:
+    return get_host_type() is not None

@@ -1,0 +1,18 @@
+[project]
+name = "tftemperatureapp"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "tfoxcroftply"}
+]
+requires-python = ">=3.10,<4.0"
+dependencies = [
+    "pyserial (>=3.5,<4.0)",
+    "python-gsmmodem (>=0.9,<0.10)",
+    "fastapi[standard] (>=0.128.0,<0.129.0)",
+
+]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

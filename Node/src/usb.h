@@ -2,6 +2,8 @@
 
 #include "constants.h"
 
+#include <Arduino.h>
+
 class USB_Mode {
     public:
         void setup(uint8_t timeout = 10);
@@ -18,14 +20,16 @@ class USB_Mode {
             private:
                 bool has_run = false;
                 char read_buffer[SERIAL_BUFFER_SIZE];
-                uint read_buffer_index;
+                uint8_t read_buffer_index;
         };
+
+        void main();
+        void handle_command(const char* input_buffer);
 
         Read_Buffer read_buffer;
         bool connected = false;
         bool busy = false;
         bool started = false;
 
-        void main();
-        void handle_command(const char* input_buffer);
+
 };

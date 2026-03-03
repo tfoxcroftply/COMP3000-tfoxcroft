@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+@theme {
+	--font-sans: Arial, sans-serif;
+	--duration-default: 150ms;
+	--duration-long: 500ms;
+	--outline-colour: #F1F1F1;
+
+	--colour-green: theme(--color-green-500);
+	--colour-grey: theme(--color-gray-300);
+	--colour-red: theme(--color-red-400);
+}
+
+@layer base {
+	body {
+		@apply font-sans m-0 p-0 select-none overflow-hidden;
+	}
+	h1, h2, h3, h4 {
+		@apply cursor-default select-none;
+	}
+}
+
+@layer components {
+	.title {
+		@apply text-3xl text-center mb-6;
+	}
+	.clickable {
+		@apply p-2 cursor-pointer transition-shadow duration-100 shadow-sm hover:shadow-md *:pointer-events-none pointer-events-auto;
+	}
+	.menu-button-container {
+		@apply rounded-full bg-white outline-2 outline-(--outline-colour);
+	}
+	.menu-button {
+		@apply h-fit mb-px;
+	}
+	.button-entry {
+		@apply h-14 p-3 w-full cursor-pointer flex space-x-2 overflow-hidden;
+	}
+	.button-entry-style {
+		@apply rounded-2xl outline-2 outline-(--outline-colour);
+	}
+	.button-icon-container {
+		@apply h-full w-auto flex flex-col justify-center;
+	}
+	.button-icon {
+		@apply h-fit w-fit -translate-y-px;
+	}
+	.button-text-container {
+		@apply flex flex-col justify-center;
+	}
+	.button-text {
+		@apply text-xl leading-none;
+	}
+}

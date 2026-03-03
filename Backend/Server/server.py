@@ -1,34 +1,52 @@
-import os
-import time
+from time import sleep
+from os.path import dirname, abspath
+from asyncio import run, create_task
 
 # custom imports
-from components.container import Container
-
+from components.types import Container
 from components.database import Database
 from components.api import Api
 from components.node_manager import NodeManager
+from components.sms import SMS
+from components.notifications import Notifications, NotificationType
 
-from components.print import vPrint
-from components.host_info import isHostValid,getHostType
+from components.print import vprint
+from components import host_info
 
-debug = True
+testing = True
 
-if __name__ == "__main__":
-    vPrint("Server starting.")
+async def test(container): # change later, probably not reliable
+    while not container.api.is_active():
+        sleep(1)
+    
+    await container.notifications.add("This is a sample notification. It does nothing yet lol.")
 
+async def main():
+    vprint("Server starting.")
     container = Container()
-    if isHostValid() == False or debug == True:
+    if not host_info.is_host_valid():
         container.config.debug = True
-        vPrint("Debug mode enabled.")
+        
+    if container.config.debug == True: # separated as the config might have debug mode already enabled
+        vprint("Debug mode enabled.")
 
     container.database = Database(container)
-    container.database.start(os.path.dirname(os.path.abspath(__file__)))
+    await container.database.start(dirname(abspath(__file__)))
+
+    container.notifications = Notifications(container)
     
-    container.api = Api(container)
-    container.api.start(80)
-
     container.node_manager = NodeManager(container)
-    container.node_manager.start()
+    await container.node_manager.start() # look into reducing startup delay if no devices are connected, maybe move it to the end
 
-    while True:
-        time.sleep(10) # logic loop here
+    container.sms = SMS(container)
+    container.sms.start()
+
+    container.api = Api(container)
+
+    if testing == True:
+        create_task(test(container))
+
+    await container.api.start() # blocking, run last
+
+if __name__ == "__main__":
+    run(main())

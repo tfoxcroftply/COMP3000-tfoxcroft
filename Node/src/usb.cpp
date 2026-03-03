@@ -1,3 +1,5 @@
+// replace read buffer with read buffer module from bridge later
+
 #include "usb.h"
 
 #include <Arduino.h>
@@ -37,6 +39,7 @@ void USB_Mode::setup(uint8_t timeout) {
         delay(1000);
     }
 
+    digitalWrite(LED_PIN, LOW);
     Serial.end();
     return;
 }
@@ -81,10 +84,7 @@ const char* USB_Mode::Read_Buffer::read() {
 }
 
 bool USB_Mode::Read_Buffer::has(const char* input_buffer) {
-    if (std::strstr(read_buffer, input_buffer) != nullptr) {
-        return true;
-    }
-    return false;
+    return std::strstr(read_buffer, input_buffer) != nullptr;
 }
 
 void USB_Mode::Read_Buffer::clear() {

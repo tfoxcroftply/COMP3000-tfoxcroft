@@ -2,8 +2,8 @@
 This file contains credits for third-party assets that are redistributed in this repository.
 
 ## Google Material Icons
-Source: https://fonts.google.com/icons
-License: Apache License 2.0
+Source: https://fonts.google.com/icons<br>
+License: Apache License 2.0<br>
 Copyright: Google LLC
 ```
                                  Apache License
