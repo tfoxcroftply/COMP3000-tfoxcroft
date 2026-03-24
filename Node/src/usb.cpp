@@ -1,95 +1,96 @@
-// replace read buffer with read buffer module from bridge later
-
 #include "usb.h"
+
+#include "constants.h"
+#include "read_buffer.h"
 
 #include <Arduino.h>
 #include <cstring>
 
-#include "constants.h"
+USBMode::USBMode(DisplayClass* input_display) : read_buffer(SERIAL_BUFFER_SIZE) {
+    display = input_display;
+};
 
-bool led_state = false;
+void USBMode::send_pair_command() {
+    // could reuse read_buffer.cpp later
+    // format "tnn:111111111111:pair"
 
-void USB_Mode::handle_command(const char* input_buffer) {
-    led_state = !led_state; // for debug
-    digitalWrite(LED_PIN, led_state);
+    char pair_command[23]; // 4 + 5 + 12 + 1 = 22
+    char mac[13]; // 12 bytes (ignoring null)
+
+    char identifier[] = "tnn:"; // 4 bytes (ignoring null)
+    char command[] = ":pair"; // 5 bytes (ignoring null)
+
+    uint64_t mac_bytes = ESP.getEfuseMac(); // get mac
+    sprintf(mac, "%012llX", mac_bytes); // useful doc https://www.ibm.com/docs/en/zos/3.1.0?topic=programs-sprintf-format-write-data
+    //mac[12] = '\0'; snprintf should handle null terminator
+
+    strcpy(pair_command, identifier); // add identifier
+    strcat(pair_command, mac); // add mac
+    strcat(pair_command, command); // add command
+    strcat(pair_command, "\n"); // newline
+
+    Serial.write(pair_command); // send pair command
+
+    // verify if it has been recieved
+
     return;
 }
 
-void USB_Mode::setup(uint8_t timeout) {
-    if (started) { return; };
+bool USBMode::start() {
+    if (running) { return false; };
 
-    Serial.begin(115200);
-    Serial.setTimeout(timeout);
+    read_buffer = ReadBuffer(SERIAL_BUFFER_SIZE);
 
-    unsigned long time = millis();
-    bool has_run = false;
+    Serial.begin(115200); // start serial
+    Serial.setDebugOutput(false);
 
-    while (millis() - time < timeout * 1000UL) {
+    uint32_t time = millis(); // returns unsigned long but uint32_t should be the same
+
+    while (millis() - time < PAIR_TIME * 1000) {
         while (Serial.available() > 0) {
-            read_buffer.update(Serial.read());
-            Serial.println(read_buffer.read());
-            if (read_buffer.has("tnh:connect") == true) {
-                digitalWrite(LED_PIN, HIGH);
-                Serial.println("tnn:connect");
-                connected = true;
-                main();
-                return;
+            if (!hasRun) {
+                display->print("USB detected. Ensure hub is in pairing mode.");
+                hasRun = true;
+            }
+
+            int byte = Serial.read();
+            read_buffer.append(byte);
+
+            if (byte == '\n') {
+                paired = handle_command();
+                read_buffer.clear();
+                if (paired == true) {
+                    return true;
+                }
             }
         }
         delay(1000);
     }
 
-    digitalWrite(LED_PIN, LOW);
-    Serial.end();
-    return;
+    return false;
 }
 
-bool USB_Mode::is_connected() {
-    return connected;
-}
+bool USBMode::handle_command() {
+    //display->clear();
 
-void USB_Mode::main() {
-    read_buffer.clear();
-    while (connected) { // change this maybe
-        while (Serial.available() > 0) {
-            char data = Serial.read();
-            if (data == '\n') { // line break
-                handle_command(read_buffer.read());
-                read_buffer.clear();
-            }
-        }
-        delay(USB_MODE_TICK_SPEED);
-    }
-    return;
-}
+    //char read_buffer_copy[SERIAL_BUFFER_SIZE + 1]; // make copy
+    //memcpy(read_buffer_copy, read_buffer.read(), sizeof(read_buffer_copy)); // copy useful part, change to strcpy if reused
+    //display->print(read_buffer_copy);
 
-USB_Mode::Read_Buffer::Read_Buffer() {
-    clear();
-}
+    // tnh:connect:
+    if (read_buffer.has("tnh:paired:\n")) { 
+        return true;
+     }
 
-void USB_Mode::Read_Buffer::update(char input_byte) {
-    if (input_byte == '\0' or input_byte == '\r' or input_byte == '\n') { return; };
-
-    if (read_buffer_index >= SERIAL_BUFFER_SIZE - 1) {
-        memmove(read_buffer, read_buffer + 1, SERIAL_BUFFER_SIZE - 1);
-        read_buffer_index--;
+    if (read_buffer.has("tnh:connect:\n")) { 
+        digitalWrite(LED_PIN, HIGH);
+        send_pair_command();
     }
 
-    read_buffer[read_buffer_index++] = input_byte;
-    read_buffer[read_buffer_index] = '\0';
+    return false; 
+
+    // old code from a modular command handler
+    //size_t index = strcspn(read_buffer.read(), "tnh:"); // get index
+    //char read_buffer_copy[SERIAL_BUFFER_SIZE + 1]; // make copy
+    //memcpy(read_buffer_copy, read_buffer_copy + index, sizeof(read_buffer_copy) - 1); // copy useful part   
 }
-
-const char* USB_Mode::Read_Buffer::read() {
-    return read_buffer; 
-}
-
-bool USB_Mode::Read_Buffer::has(const char* input_buffer) {
-    return std::strstr(read_buffer, input_buffer) != nullptr;
-}
-
-void USB_Mode::Read_Buffer::clear() {
-    read_buffer_index = 0;
-    read_buffer[0] = '\0';
-}
-
-

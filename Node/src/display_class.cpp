@@ -22,9 +22,16 @@ void DisplayClass::setup() {
     display.display();
 }
 
+void DisplayClass::end() {
+    // look into disabling display somehow
+    clear();
+
+    Wire.end();
+}
+
 
 void DisplayClass::print(const char buffer[]) {
-    if (!setup_mode) { return; }
+    //if (!setup_mode) { return; }
 
     // add logic to shift lines up later
 
@@ -37,25 +44,4 @@ void DisplayClass::clear() {
     display.setCursor(0, 0);
     display.display();
 }
-
-void DisplayClass::update() {
-    if (setup_mode) {
-        setup_mode = false;
-        display.clearDisplay();
-    }
-
-    display.clearDisplay();
-
-    display.setCursor(0, 0);
-    display.setTextSize(2);
-    display.write("TN Server\n\n");
-    
-    display.setTextSize(1);
-    display.write("Connected devices: 0\n");  // placeholders
-    display.write("Last update: 12:00\n");
-    display.write("CPU temperature: ?c");
-
-    display.display();
-}
-
 

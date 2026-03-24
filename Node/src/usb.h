@@ -1,35 +1,25 @@
 #pragma once
 
 #include "constants.h"
+#include "read_buffer.h"
+#include "display_class.h"
 
 #include <Arduino.h>
+#include <cstring>
 
-class USB_Mode {
+class USBMode {
     public:
-        void setup(uint8_t timeout = 10);
-        bool is_connected();
- 
+        USBMode(DisplayClass* input_display);
+        bool start();
+
     private:
-        class Read_Buffer {
-            public:
-                Read_Buffer();
-                void update(char input_byte);
-                bool has(const char* input_buffer);
-                const char* read();
-                void clear();
-            private:
-                bool has_run = false;
-                char read_buffer[SERIAL_BUFFER_SIZE];
-                uint8_t read_buffer_index;
-        };
+        bool handle_command();
+        void send_pair_command();
 
-        void main();
-        void handle_command(const char* input_buffer);
+        ReadBuffer read_buffer;
+        DisplayClass* display;
 
-        Read_Buffer read_buffer;
-        bool connected = false;
-        bool busy = false;
-        bool started = false;
-
-
+        bool running = false;
+        bool hasRun = false;
+        bool paired = false;
 };

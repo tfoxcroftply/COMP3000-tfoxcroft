@@ -3,10 +3,11 @@ from components.types import ReturnData
 
 class DatabaseUtils:
     table_info = {
-        "nodes": "hwid TEXT PRIMARY KEY, name TEXT NOT NULL DEFAULT 'Node', is_active INTEGER NOT NULL DEFAULT 0, last_seen INTEGER NOT NULL DEFAULT -1, disabled INTEGER NOT NULL DEFAULT 0, debug INTEGER NOT NULL DEFAULT 0", 
-        #"nodes": "", complete later
-        "notifications": "id INTEGER PRIMARY KEY AUTOINCREMENT, text STRING NOT NULL, timestamp INTEGER NOT NULL, notification_type INTEGER NOT NULL, read INTEGER NOT NULL DEFAULT 0", 
-        #"readings": ""}
+        "nodes": "hwid TEXT PRIMARY KEY, name TEXT NOT NULL DEFAULT 'Node', is_active INTEGER NOT NULL DEFAULT 1, last_seen INTEGER NOT NULL DEFAULT -1, signal_strength INTEGER NOT NULL DEFAULT -1, battery_power INTEGER NOT NULL DEFAULT -1, disabled INTEGER NOT NULL DEFAULT 0, debug INTEGER NOT NULL DEFAULT 0", 
+        "readings": "id INTEGER PRIMARY KEY AUTOINCREMENT, timestamp INTEGER NOT NULL, node_hwid INTEGER NOT NULL, temp REAL, hum REAL, FOREIGN KEY (node_hwid) REFERENCES nodes(hwid)",
+        "notifications": "id INTEGER PRIMARY KEY AUTOINCREMENT, text STRING NOT NULL, timestamp INTEGER NOT NULL, notification_type INTEGER NOT NULL, read INTEGER NOT NULL DEFAULT 0",
+        "thresholds": "id INTEGER PRIMARY KEY AUTOINCREMENT, type STRING NOT NULL, value INTEGER NOT NULL, active_alert INTEGER NOT NULL DEFAULT 0, last_trigger INTEGER NOT NULL, disabled INTEGER NOT NULL DEFAULT 0", # 1: 1, ">=", 25, timetamp, 0 
+        "sms": "id INTEGER PRIMARY KEY AUTOINCREMENT, threshold INTEGER NOT NULL, timestamp INTEGER NOT NULL, FOREIGN KEY (threshold) REFERENCES thresholds(id)"
     }
 
     _debug_name = "debug_node_"
@@ -38,7 +39,7 @@ class DatabaseUtils:
         vprint("Recreating database. " + ("'clear_database' is enabled." if self.database.container.config.clear_database else ""))
 
         for table, table_schema in self.table_info.items():
-            written: ReturnData = await self.database.write(f"""CREATE TABLE {table} ( {table_schema} )""")
+            written: ReturnData = await self.database.write(f"CREATE TABLE {table} ( {table_schema} )")
             if written.success == False:
                 vprint("Unable to create first table in database.", error=True)
                 return False
@@ -51,7 +52,7 @@ class DatabaseUtils:
                 temp_name = self._debug_name + str(i)
                 found: ReturnData = await self.database.read_one("SELECT name FROM nodes WHERE name=?", (temp_name,))
                 if found.success and found.data == None:
-                    written: ReturnData = await self.database.write("INSERT INTO nodes (hwid, name, is_active, debug) VALUES (?, ?, ?, ?)", params=(temp_name , temp_name, 1, 1))
+                    written: ReturnData = await self.database.write("INSERT INTO nodes (hwid, name, is_active, debug) VALUES (?, ?, ?, ?)", (str(i + 1) * 8, temp_name, 1, 1))
                     if written.success:
                         vprint(f"Created debug node '{temp_name}'.")
                     else:

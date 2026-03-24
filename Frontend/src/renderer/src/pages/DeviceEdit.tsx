@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { useParams } from "react-router-dom";
+import { ConnectionContext } from "../contexts/ConnectionHandler";
 
 import ToggleButton from "../components/ToggleButton";
 
@@ -15,11 +16,12 @@ export default function DeviceEdit() {
 
 	const params = useParams()
 	const [node, setNode] = useState<device>();
+	const { getPath } = useContext(ConnectionContext)
 
 	useEffect(() => {
 		const fetchDevice = async function () {
 			if (!params.id) {throw new Error("Missing hwid")}
-			const response = await fetch("http://127.0.0.1/api/get-node-info", {
+			const response = await fetch(getPath("/api/get-node-info"), {
 				headers: {"node-hwid": params.id}
 			})
 			if (!response.ok) {

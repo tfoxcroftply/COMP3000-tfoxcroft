@@ -10,7 +10,6 @@ class Bridge {
         Bridge() {};
         void setup();
         bool is_connected();
-        bool recieve();
         bool send(const uint8_t* data_buffer, const size_t buffer_size);
         void ping();
         DisplayClass *display;

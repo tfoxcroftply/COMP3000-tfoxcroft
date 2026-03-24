@@ -4,15 +4,16 @@ import { useLocation, useNavigate, Outlet, matchPath } from "react-router-dom"
 import { NotificationContext } from "@renderer/contexts/NotificationHandler"
 
 import Connection from "../components/Connection";
+import NotificationWindow from "./NotificationWindow";
 
 import menuIcon from "../assets/icons/menu_24dp_1F1F1F_FILL0_wght400_GRAD0_opsz24.svg"
 import backIcon from "../assets/icons/arrow_back_24dp_1F1F1F_FILL0_wght400_GRAD0_opsz24.svg"
 import notificationIcon from "../assets/icons/notifications_24dp_1F1F1F_FILL0_wght400_GRAD0_opsz24.svg"
 import homeIcon from "../assets/icons/home_24dp_F1F1F1_FILL0_wght400_GRAD0_opsz24.svg"
 import logsIcon from "../assets/icons/analytics_24dp_F1F1F1_FILL0_wght400_GRAD0_opsz24.svg"
+import thresholdsIcon from "../assets/icons/thermometer_alert_24dp_F1F1F1_FILL0_wght400_GRAD0_opsz24.svg"
 import nodeIcon from "../assets/icons/router_24dp_1F1F1F_FILL0_wght400_GRAD0_opsz24.svg"
 import settingsIcon from "../assets/icons/settings_24dp_F1F1F1_FILL0_wght400_GRAD0_opsz24.svg"
-import NotificationWindow from "./NotificationWindow";
 
 export default function Layout() {
 	const location = useLocation();
@@ -38,6 +39,7 @@ export default function Layout() {
 	const pages : PageData[] = [
 		{path: "/home", name: "Dashboard", icon: homeIcon, offset: false, inMenu: true},
 		{path: "/logs", name: "Logs", icon: logsIcon, offset: false, inMenu: true},
+		{path: "/thresholds", name: "Thresholds", icon: thresholdsIcon, offset: false, inMenu: true},
 		{path: "/devices", name: "Devices", icon: nodeIcon, offset: true, inMenu: true},
 		{path: "/device-edit/:id", name: "Modify device", icon: undefined, offset: false, inMenu: false},
 		{path: "/settings", name: "Settings", icon: settingsIcon, offset: false, inMenu: true},
@@ -136,7 +138,7 @@ export default function Layout() {
 					
 				</div>
 				<div className="h-px w-full bg-neutral-100 mb-6" />
-				<div className="px-6">
+				<div className="px-6 h-full">
 					<Outlet />
 				</div>
 

@@ -1,5 +1,7 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, useContext } from "react"
 import { useNavigate } from "react-router-dom"
+
+import { ConnectionContext } from "../contexts/ConnectionHandler"
 
 import nodeIcon from "../assets/icons/router_24dp_1F1F1F_FILL0_wght400_GRAD0_opsz24.svg"
 
@@ -16,10 +18,11 @@ export default function Devices() {
 
 	const [nodes, setNodes] = useState<device[] | null>(null);
 	const [pairVisibility, setPairVisibility] = useState<boolean>(false);
+	const { getPath } = useContext(ConnectionContext)
 	
 	useEffect(() => {
 		const fetchDevices = async() => {
-			const response = await fetch("http://127.0.0.1/api/get-nodes")
+			const response = await fetch(getPath("/api/get-nodes"))
 			if (!response.ok) {
 				return // add some sort of error handling
 			}

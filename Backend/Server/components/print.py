@@ -34,6 +34,9 @@ def vprint(input: str | None, force: bool = False, error: bool = False) -> None:
 
     caller_thread = threading.current_thread()
 
+    if caller_thread == "serial" and config.debug_serial == False:
+        return None
+
     if caller_thread.name != last_calling_thread or last_calling_thread == None:
         last_calling_thread = caller_thread.name
         print(new_line() + "\033[34m[" + caller_thread.name + "]\033[37m")

@@ -24,7 +24,7 @@ class NodeManager:
 
     async def start(self) -> bool:
         return await self.node_reciever.start()
-        
+    
     async def get_node_list(self) -> ReturnData:
         return await self.container.database.read_all("SELECT hwid, name, is_active FROM nodes", None)
     
@@ -33,4 +33,23 @@ class NodeManager:
             return ReturnData()
         
         return await self.container.database.read_one("SELECT * FROM nodes WHERE hwid = ?", (node_hwid,)) # renamed from a debug name
+    
+    async def add_node(self, node_hwid: str) -> ReturnData:
+
+        # add more checks later
+        # must be 12 characters, all uppercase
+        # check esp efuse return value, ensure it stays at a fixed length
+
+        check = await self.get_node_info(node_hwid)
+        if check.data is not None and check.success:
+            return ReturnData("Node already exists.", success=False)
+
+        count: ReturnData = await self.get_node_list()
+        if not count.success: return ReturnData()
+
+        write: ReturnData = await self.container.database.write("INSERT INTO nodes (hwid, name) VALUES (?, ?)", (str(node_hwid), "Node " + str(len(count.data) + 1),))
+        if write and write.success:
+            return ReturnData(success=True)
+        
+        return ReturnData(success=False)
     

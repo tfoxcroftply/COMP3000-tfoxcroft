@@ -18,3 +18,4 @@ ChartJS.register(
 	Tooltip,
 	Legend
 );
+

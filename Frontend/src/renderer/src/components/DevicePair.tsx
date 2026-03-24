@@ -1,3 +1,7 @@
+// potentially merge new popuphandler
+// buggy, fix later
+// works most of the time
+
 import { useContext, useEffect, useState } from "react"
 import useWebSocket, { ReadyState } from "react-use-websocket";
 
@@ -12,9 +16,9 @@ export default function DevicePair({ visible, closed } : { visible?: boolean, cl
 	const [websocketActive, setWebsocketActive] = useState(false); // should try websocket connect
 	const [messages, setMessages] = useState<string[]>([]);
 
-	const connected = useContext(ConnectionContext);
+	const { connected, ip, getPath } = useContext(ConnectionContext);
 
-	const { sendMessage, lastMessage, readyState } = useWebSocket(websocketActive ? "ws://127.0.0.1:8080" : null)
+	const { sendMessage, lastMessage, readyState } = useWebSocket(websocketActive ? "ws://" + ip + ":8080" : null)
 
 	const delay = async function(milliseconds: number) {
         return new Promise(finish => setTimeout(finish, milliseconds))
@@ -50,7 +54,7 @@ export default function DevicePair({ visible, closed } : { visible?: boolean, cl
 	useEffect(() => {
 		const start = async function () {
 			if (visible === true && !websocketActive && connected) {
-				const response = await fetch("http://127.0.0.1/api/websocket-start", { method: "POST" })
+				const response = await fetch(getPath("/api/websocket-start"), { method: "POST" })
 				console.log(response.status)
 				setWebsocketActive(response.status === 200 ? true : false)
 			}
@@ -63,8 +67,6 @@ export default function DevicePair({ visible, closed } : { visible?: boolean, cl
 
 		start()
 	},[visible, connected]) // active = devicepair.tsx visible
-
-
 
 	return (
 		<div className={"fixed flex inset-0 z-30 transition-opacity duration-default " + (visible === true ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none") }> {/* flex works for some reason */}

@@ -1,63 +1,103 @@
-import test from "node:test";
-import { createContext, useEffect, useState } from "react";
-
+import { createContext, useContext, useEffect, useState, useRef } from "react";
+import { delay } from "../components/Utils"
 
 type ConnectionContextType = {
     connected: boolean,
-    ip: string
+    started: boolean,
+    devMode: boolean,
+    ip: string,
+    startConnection: () => void,
+    getPath: (path: string) => string;
 }
 
 export const ConnectionContext = createContext<ConnectionContextType>({
     connected: false,
-    ip: "",
+    started: false,
+    devMode: false,
+    ip: "Unknown",
+    startConnection: () => null,
+    getPath: () => ""
 });
 
 export function ConnectionHandler({children}: {children: React.ReactNode}) {
+    // context variables
     const [connected, setConnected] = useState(false);
-    const [disconnectedForLong, setDisconnectedForLong] = useState(false);
-    const [appActive, setAppActive] = useState(false); // for checking first connect
-    
-    let ip: string = "unknown";
-    let healthCheckingActive: boolean = false;
+    const [started, setStarted] = useState(false);
+    const [devMode, setDevMode] = useState(false);
+    const [ip, setIp] = useState("Unknown");
+    const [healthChecking, setHealthChecking] = useState(false);
 
-    const retrieveIp = async function() {
-        // ignore
-    };
+    const connectedOnce = useRef(false); // maybe change to state
 
-    const delay = async function(milliseconds: number) {
-        return new Promise(finish => setTimeout(finish, milliseconds));
-    }
-
-    const testConnection = async function() {
+    const checkConnection = async (inputIp: string) => {
+        if (inputIp === "Unknown") { return false; } // use inputIp to prevent stale variables
         try {
-            const test = await fetch("http://127.0.0.1/api/health", { signal: AbortSignal.timeout(3000) })
-            if (test.ok) {
-                setConnected(true);
-                return;
-            }
-        } catch {
-            // ignore
-        }
+            const response = await fetch("http://" + inputIp + "/api/health"); // don't use getPath() here, ip state can become stale
 
-        setConnected(false);
+            if (response.ok) { connectedOnce.current = true; }
+
+            return response.ok
+        } catch (error) {
+            return false;
+        }
     }
 
-    useEffect(() => { // non refreshing
-        const check = async function () {
-            if (healthCheckingActive) { return; }
-            healthCheckingActive = true
+    // health checking loop
+    useEffect(() => {
+        if (!healthChecking || !started) { return };
 
-            while (true) {
-                await testConnection();
+        let cancel = false;
+
+        const loop = async function() {
+            while (!cancel) {
+                const test: boolean = await checkConnection(ip);
+                console.log(test)
+                if (cancel) { break; };
+
+                setConnected(test);
                 await delay(5000);
             }
         }
-        
-        check();
-    },[])
+
+        loop();
+
+        return () => {
+            cancel = true;
+        }
+
+    },[healthChecking, ip, started])
+
+    const start = async function() {
+        while (true) {
+            const foundIp = await window.electron.discover();
+
+            if (foundIp !== null) {
+                setIp(foundIp);
+
+                const isValid = await checkConnection(foundIp);
+                if (isValid) {
+                    setConnected(true);
+                    setHealthChecking(true);
+                    break;
+                }
+            }
+            await delay(2000);
+        }
+    }
+
+    const startConnection = function() {
+        if (!started) {
+            setStarted(true);
+            start();
+        }
+    };
+
+    const getPath = function(path: string) {
+        return "http://" + ip + path;
+    }
 
     return (
-        <ConnectionContext.Provider value={{connected, ip}}>
+        <ConnectionContext.Provider value={{connected, devMode, ip, startConnection, started, getPath}}>
             {children}
         </ConnectionContext.Provider>
     )

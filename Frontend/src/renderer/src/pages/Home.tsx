@@ -1,6 +1,4 @@
-import { Line } from "react-chartjs-2"
-
-import "../components/Chart"
+import LineGraph from "@renderer/components/LineGraph"
 
 const test = {
 	labels: ["test1","test2"],
@@ -14,21 +12,13 @@ const test = {
 
 export default function Home() {
 	return (
-		<div>
-			<div className="flex justify-center">
-				<div className="mx-auto w-full max-w-[80vw]">
-					<Line data={test} options={{
-						responsive: true,
-						maintainAspectRatio: false,
-						plugins: {
-							legend: {
-								display: false
-							}
-						}
-					}} />
+		<div className="h-full">
+			<div className="flex justify-center h-full">
+				<div className="mx-auto w-full max-w-[80vw] h-72">
+					<LineGraph datasets={test} />
 				</div>
 			</div>
-			<div className="grid gap-4 grid-cols-2" >
+			<div className="flex justify-center space-x-4 h-full *:flex-1" >
 				<div className="clickable button-entry-style h-16">
 					<h1>Average temperature</h1>
 				</div>

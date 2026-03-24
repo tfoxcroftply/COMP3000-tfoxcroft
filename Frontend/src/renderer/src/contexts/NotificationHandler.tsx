@@ -24,14 +24,14 @@ export function NotificationHandler({children}: {children: React.ReactNode}) {
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [read, setRead] = useState<boolean>(true)
 
-    const connected = useContext(ConnectionContext);
+    const { connected, getPath } = useContext(ConnectionContext);
 
     useEffect(() => {
         //setRead(false) // for debug
         const checkForNotifications = async function () {
             if (!connected) { return }
             try {
-                const found = await fetch("http://127.0.0.1/api/get-notifications")
+                const found = await fetch(getPath("/api/get-notifications"))
                 if (!found.ok) {
                     console.log("Could not retrieve notifications from API.")
                     return
@@ -44,7 +44,7 @@ export function NotificationHandler({children}: {children: React.ReactNode}) {
 
                 setRead(!data.data.some(entry => entry.read === 0))
 
-                console.log(Array.isArray(data))
+                //console.log(Array.isArray(data))
             } catch {
                 // ignore
             }
@@ -54,12 +54,12 @@ export function NotificationHandler({children}: {children: React.ReactNode}) {
         const timeout = setInterval(checkForNotifications, 5000);
 
         return () => clearInterval(timeout)
-    },[])
+    },[connected])
 
     const markAllRead = async function () {
         if (!notifications.some(entry => entry.read === 0)) { return }
         try {
-            const request = await fetch("http://127.0.0.1/api/patch-notifications-read", {
+            const request = await fetch(getPath("/api/patch-notifications-read"), {
                 method: "PATCH"
             });
 
@@ -72,9 +72,9 @@ export function NotificationHandler({children}: {children: React.ReactNode}) {
         }
     }
 
-    const deleteAll = async function () {
+    const deleteAll = async function () { // unused
         try {
-            const request = await fetch("http://127.0.0.1/api/delete-notifications", {
+            const request = await fetch(getPath("/api/delete-notifications"), {
                 method: "DELETE"
             });
             if (request.status === 200) {

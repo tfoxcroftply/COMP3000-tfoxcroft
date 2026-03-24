@@ -1,13 +1,17 @@
 # handled by node_manager
 # pairing sequence and websocket
 
+# api request starts the websocket function
+# the interface connects to the websocket
+# websocket turns off after 30 seconds
+
 import websockets
 from asyncio import create_task, sleep, CancelledError
 from time import time
 
 from components.serial import NodeSerial
 from components.print import vprint
-from components.types import ReturnData
+from components.types import ReturnData, NodeSerialData
 
 class NodePair:
     def __init__(self, container):
@@ -15,8 +19,8 @@ class NodePair:
         self._websocket_active: bool = False
         self._websocket = None
         self._pairing_active: bool = False # needs a check because multiple instances of the websocket handler can spawn
-        self._serial_module = NodeSerial(container)
-        self._serial_module.start("COM3", "tnn")
+        self._serial = NodeSerial(container)
+        self._serial.start(self.container.config.usb_port, "tnn")
         self._last_activity: int = -1
 
     async def _pairing_sequence(self, websocket):
@@ -27,22 +31,33 @@ class NodePair:
 
         try:
             await websocket.send("Connecting to serial.")
+            await websocket.send("Attempting to connect to node. Ensure the node is plugged into the hub.")
+            for i in range(10): # temporary
 
-            self._pairing_active = True
-            data: bool = self._serial_module.open_serial()
-            if not data:
-                await websocket.send("Error when opening serial.")
-                vprint("Unable to start pairing sequence. Serial open command failed.", error=True)
-                return
-        
-            success = await self._serial_module.attempt_connect()
-            if not success:
-                await websocket.send("Unable to start pairing sequence. No node detected.")
-                vprint("Unable to start pairing sequence. No node detected.", error=True)
-                return
-            
-            await websocket.send("Node connected successfully.")
-            vprint("Node connected successfully.")
+                self._serial.send_command("tnh:connect:\n")
+                data: NodeSerialData | None = self._serial.receive_command()
+                if data:
+                    await websocket.send("Recieved node pairing information.")
+                    self._serial.send_command("tnh:paired:\n")
+
+                    added: ReturnData = await self.container.node_manager.add_node(data.command)
+                    if added.success:
+                        await websocket.send("Successfully paired node. Refreshing in 5 seconds.")
+                        await sleep(5)
+                        await websocket.send("refresh")
+                    else:
+                        error: str = f"Unable to pair to node. {"Error unknown." if added.data is None else added.data}"
+                        await websocket.send(error)
+                        vprint(error, error=True)
+
+                    break
+
+                await sleep(1)
+            else:
+                await websocket.send("Pairing failed. No node was detected.")
+
+            # connect to node
+
         except websockets.ConnectionClosed:
             vprint("Websocket closed by command.")
         except Exception as e:
@@ -55,14 +70,14 @@ class NodePair:
         return self._websocket_active
 
     async def connect(self) -> bool:
-        if self._websocket_active or self._serial_module.is_serial_active():
-            vprint("Websocket failed to open. Websocket or serial is already active and pending closure.", error=True)
+        if self._websocket_active :
+            vprint("Websocket failed to open. Websocket is already active and pending closure.", error=True)
             return
         
         try:        
             self._websocket_active = True
         
-            self._serial_module.message_list = []
+            self._serial.message_list = []
             self._last_activity = time()
 
             self._websocket = await websockets.serve(handler=self._pairing_sequence, host="127.0.0.1", port=self.container.config.websocket_port, origins=["http://localhost:5173"])

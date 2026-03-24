@@ -42,7 +42,7 @@ void setup() {
 
 void loop() {
     display.update();
-    bridge.ping();
+    bridge.ping(); // delete later, let bridge module handle it if input is "tnh:ping:""
 
     memset(received_buffer, 0, sizeof(received_buffer));
     const uint16_t radio_state = radio.receive(received_buffer, sizeof(received_buffer));
@@ -52,5 +52,8 @@ void loop() {
         const bool sent = bridge.send(received_buffer, packet_length);
     }
 
-    delay(5000);
+    const char test[] = "tnn:111111111111:t-20h50b30"; // incoming lora commands should be in this format, perhaps change optional negative to 0 as in t020h
+    bridge.send((const uint8_t*)test, strlen(test));
+
+    delay(20000);
 }

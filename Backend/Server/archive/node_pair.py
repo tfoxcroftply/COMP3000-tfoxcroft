@@ -7,7 +7,7 @@
 # websocket should handle serial
 
 from serial import Serial, SerialException
-from print import vprint
+from components.print import vprint
 from components.types import ReturnData
 from websockets.asyncio.server import serve
 from time import sleep, time

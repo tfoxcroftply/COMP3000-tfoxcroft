@@ -1,6 +1,6 @@
-const { contextBridge, ipcRenderer } = require("electron")
+import { contextBridge, ipcRenderer } from "electron" // moved to es module imports
 
 contextBridge.exposeInMainWorld("electron", {
-	discover: () => ipcRenderer.invoke("connection-discover")
+	discover: () => ipcRenderer.invoke("connectionDiscover"),
+	isDev: () => ipcRenderer.invoke("isDev")
 });
-

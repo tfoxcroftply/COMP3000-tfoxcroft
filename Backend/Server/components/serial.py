@@ -1,158 +1,160 @@
-# serial module
-# gets port info from host_info
-# remember to invoke commands elsewhere
-
-# format: identifier:command:data eg. tnh:test:12345
+# serial class (second version) for bridge and lora node pairing
+# modules invoke receiveCommand(identifier) and get NodeSerialData type
+# bridge.py and node_reciever.py
 
 from serial import Serial, SerialException
-from time import time
-from asyncio import wait_for, sleep, CancelledError
-from dataclasses import dataclass
 
 from components.print import vprint
-from components.types import ReturnData, NodeSerialData
+from components.types import NodeSerialData
 
 class NodeSerial:
     def __init__(self, container):
         self.container = container
-        self._serial_active: bool = False
-        self.message_list: list[str] = []
         self.serial = Serial(baudrate = self.container.config.usb_baud) # maybe separate
-        self._started: bool = False
+        self._started = False
 
-    def start(self, port: str, target_identifier: str):
+    def start(self, port: str, target_identifier: str, timeout: int = 1):
         self.serial.port = port
-        self.serial.timeout = 1
+        self.serial.timeout = timeout
         self.target_identifier = target_identifier
         self._started = True
 
-    def is_serial_active(self) -> bool:
-        return self._serial_active
+    def is_active(self) -> bool:
+        return self.serial.is_open
+
+    def _check_active(self) -> bool:
+        if not self._started:
+            vprint("Cannot receive serial commands. Module has not been started.")
+            return False
+        
+        if not self.serial.is_open:
+            vprint("Cannot receive serial commands. Port is not open. Attempting to reconnect.")
+
+            if not self.connect(True):
+                vprint("Failed to reconnect to serial.")
+                return False
+        
+        return True
     
-    def _append_to_log(self, string: str) -> None: # remove this function
-        self.message_list.append(string)
+    def _handle_serial_error(self, silent: bool = False) -> bool:
+        vprint("Serial error detected, reconnecting.")
 
-    def send_command(self, input: str) -> bool:
-        bytes_sent: int = self.serial.write((input + "\n").encode())
-        return bytes_sent > 0
+        if not self.connect(True):
+            vprint(f"Serial device '{self.target_identifier}' disconnected.", error=True)
+    
+    # command handling
 
-    def parse_command(self, input_data: str) -> NodeSerialData | None: # maybe move to regex
-        start = input_data.find(f"{self.target_identifier}:")
-        if start == -1:
-            vprint("Failed to parse serial command. Identifier is not present.", error=True)
-            return None
+    def _parse_command(self, input: str) -> NodeSerialData | None:
+        try: # probably temporary
+            strings: list[str] = []
 
-        end = input_data.find("\n", start)
-        if end == -1: 
-            vprint("Failed to parse serial command. Newline is not present.", error=True)
-            return None
+            strings = input.split(":")
+
+            if len(strings) != 3:
+                vprint("Unknown format of incoming serial command.")
+                return None
+            
+            if len(strings[0]) != 3 or not strings[0].startswith("tn"):
+                vprint("Incoming serial command does not match identifier format.")
+                return None
+            
+            return NodeSerialData(strings[0], strings[1], strings[2])
         
-        selected = input_data[start:end]
-        splitted = selected.split(":", 2)
-        if not len(splitted) == 3 or splitted[0] != self.target_identifier:
-            vprint("Failed to parse serial command. Command format is not recognised.", error=True)
-            return None
+        except Exception:
+            vprint("Unknown error when parsing serial command.")
         
-        command: str = splitted[1]
-        data: str = splitted[2]
-
-        return NodeSerialData(command, data)
-
-    async def receive_commmand(self, specific: str | None = None, timeout: int = 1, _starting: bool = False) -> ReturnData:
-        if not _starting and not self._serial_active:
-            vprint("Unable to recieve serial commands. Serial is not active.", error=True)
-            return ReturnData()
+        return None
+    
+    def _recieve_command_logic(self, line: bytes) -> NodeSerialData:
+        if len(line) == 0:
+            return None # no data found
         
         try:
-            for i in range(timeout):
-                lines = self.serial.readlines()
+            decoded_line = line.decode().strip()
+        except UnicodeDecodeError as e:
+            vprint(f"Error when decoding incoming serial data. {e}")
+            return None
+        
+        except Exception:
+            vprint("Unknown error when decoding incoming serial data.")
+            return None
 
-                if not lines or len(lines) == 0: continue
+        
+        parsed_data: NodeSerialData | None = self._parse_command(decoded_line)
 
-                for line in lines:
-                    try:
-                        decoded = line.decode()
-                        decoded = decoded.strip() 
-                        if not decoded == specific:
-                            continue
-                            
-                        parsed_command: NodeSerialData | None = self.parse_command(decoded + "\n") # sends without checking, would fail to except block below if invalid
-                        if parsed_command is not None:
-                            return ReturnData(parsed_command, True)
-                        
-                    except UnicodeDecodeError:
-                        vprint("Error when decoding serial input stream. Continuing.", error=True)
-                        continue
+        if parsed_data is not None:
+            if parsed_data.identifier == self.target_identifier:
+                return parsed_data
 
-                await sleep(1)
+        return None
+ 
+    def receive_command(self) -> NodeSerialData | None:
+        if not self._check_active(): return None
+        
+        try:
+            while self._check_active():
+                line: bytes = self.serial.readline()
+                if not line:
+                    vprint("No incoming serial data found.")
+                    return None
+                
+                vprint(f"Received serial: '{line}'")
+                
+                found_data: NodeSerialData | None = self._recieve_command_logic(line)
+
+                if found_data is not None:
+                    return found_data
 
         except SerialException as e:
-            vprint("Serial error when reading incoming data.", error=True)
+            vprint(f"Serial error when reading incoming serial data. {e}")
+            self._handle_serial_error()
 
-        except Exception as e:
-            vprint("Unknown error when reading incoming data.", error=True)
+        except Exception:
+            vprint("Unknown error when reading incoming serial data.")
 
-        return ReturnData()
-    
-    async def attempt_connect(self, timeout: int | None = None) -> bool:
-        if self._serial_active:
-            vprint("Serial connection attempt failed. Serial is already connected.", error=True)
-            return False
-
-        started_time = time()
-
-        vprint(f"Attempting to connect to '{self.target_identifier}'.")
+        return None
+        
+    def send_command(self, command: str) -> bool:
+        if not self._check_active(): return False
 
         try:
-            new_timeout = timeout if timeout is not None else self.container.config.usb_timeout_connect
-            while time() - started_time < new_timeout:
-                if not self.serial.is_open:
-                    try:
-                        self.serial.open()
-                    except SerialException as e:
-                        print(e)
-                else:
-                    self.send_command("tnh:connect:")
-                    found: ReturnData = await self.receive_commmand(f"{self.target_identifier}:connect:", 1, True)
-                    if found.success:
-                        vprint(f"Connected to '{self.target_identifier}' successfully.")
-                        return True
-                
-                await sleep(1)
-                
-        except CancelledError:
-            vprint("Serial connection request interrupted.")
+            encoded: bytes = command.encode()
+            self.serial.write(encoded)
+            vprint(f"Successfully sent '{encoded}' to '{self.target_identifier}'")
+            return True
+        
+        except SerialException as e:
+            vprint(f"Serial error when writing to serial. {e}")
+            self._handle_serial_error()
 
-        vprint(f"Serial connection to '{self.target_identifier}' failed.", error=True)
+        except BytesWarning:
+            vprint("Error when encoding serial command.")
+        except Exception as e:
+            vprint("Error when writing to serial.")
         return False
 
-    def open_serial(self) -> bool:
-        if not self._started:
-            vprint("Failed to open serial. Module not initialised.", error=True)
-            return False
+    # connection handling
 
-        if self._serial_active: 
-            vprint("Failed to open serial. Serial is already active!", error=True)
-            return False
+    def connect(self, force: bool = False) -> bool:
+        if self.serial.is_open: # probably will be checked in start() anyway
+            if not force:
+                vprint("Unable to open serial port. Serial port is already connected.")
+                return False
             
+            self.serial.close()
+
+        if self.serial.port is None: # port is required so probably redundant
+            vprint("Unable open serial. No port has been defined.")
+        
         try:
             self.serial.open()
-            if self.serial.is_open:
-                self._serial_active = True
-                vprint(f"Serial opened successfully. Listening for '{self.target_identifier}'.")
-                return True
-            
-        except Exception as e:
-            vprint(f"Error opening serial. '{e}'")
-            return False
+            return True # if this runs it probably worked
         
-        vprint("Unknown error when opening serial.", error=True)
+        except SerialException as e:
+            vprint(f"Unable to open serial port. {e}")
+
         return False
 
-        
-    def close_serial(self) -> bool: # requested by websocket if timeout
-        if not self.serial_active:
-            vprint("Failed to close serial. Serial is not active.", error=True)
-            return
-        
-        self.serial_active = False
+
+    def _disconnect(self) -> bool:
+        raise NotImplementedError

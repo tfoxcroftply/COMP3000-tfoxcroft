@@ -1,12 +1,14 @@
 import { app, BrowserWindow, ipcMain } from "electron"
 import { join } from "path"
 import { is } from "@electron-toolkit/utils"
-
 import { Bonjour } from "bonjour-service"
+
+// variables
+const forceConnection = false; // forces device search in dev mode
 const discoveryTimeout = 30; // seconds
 
+
 const bonjour = new Bonjour();
-let hostIp = -1; // server tracking, might change method
 
 const createWindow = () => {
 	const window = new BrowserWindow({
@@ -16,12 +18,11 @@ const createWindow = () => {
 		webPreferences: {
 			nodeIntegration: false,
 			contextIsolation: true,
-			preload: join(__dirname, '../preload/index.js'),
+			preload: join(__dirname, '../preload/index.js'), // keep as js not ts
 		},
 	})
 
 	window.setMenuBarVisibility(false);
-	//window.loadFile(path.join(__dirname, "index.html"));
 
 	if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
 		window.loadURL(process.env['ELECTRON_RENDERER_URL'])
@@ -30,24 +31,26 @@ const createWindow = () => {
 	}
 }
 
-ipcMain.handle("connection-discover",() => {
-	return new Promise(resolve => { // doesnt resolve properly yet
-		const search = bonjour.find({} as any, service => {
+ipcMain.handle("connectionDiscover",() => {
+	return new Promise<string | null>(resolve => { // doesnt resolve properly yet
+		if (is.dev && !forceConnection) {
+			resolve("127.0.0.1"); 
+			return;
+		}
+
+		const search = bonjour.find({type: "tftemperaturenet"} as any, service => {
 			console.log(service); // temporary debug print
-		})
+		});
 		
 		setTimeout(() => {
 			search.stop();
 			resolve(null);
+			return;
 		}, discoveryTimeout * 1000);
 	})
 })
 
-ipcMain.handle("connection-test",() => {
-	console.log("Testing connection."); // temporary
-})
-
-ipcMain.handle("dev-environment",() => {
+ipcMain.handle("isDev",() => {
 	return is.dev
 })
 

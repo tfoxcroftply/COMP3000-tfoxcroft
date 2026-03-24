@@ -1,13 +1,14 @@
 from enum import Enum, auto
-from dataclasses import field
+from dataclasses import field, dataclass
 from time import time
 
 from components.print import vprint
 from components.types import ReturnData, NotificationType
 
+@dataclass(frozen=True, slots=True)
 class Notification: # maybe scrap this
     id: int
-    contents: str
+    text: str
     notify_type: NotificationType = NotificationType.GENERAL
 
 class Notifications:
@@ -22,7 +23,7 @@ class Notifications:
                 vprint("Failed to get notification from string. Matching notification does not exist.", error=True)
                 return None
             
-            new_notification = Notification(read.data.id, read.data.contents, read.data.notify_type) # notify_type might be integer but should match enums
+            new_notification = Notification(read.data["id"], read.data["text"], read.data["notification_type"])
             return new_notification
 
         vprint("Failed to get notification from string.", error=True)
@@ -53,8 +54,8 @@ class Notifications:
         vprint("Unable to update all notifications as read.")
         return False
     
-    async def add(self, text: str, notification_type: NotificationType = NotificationType.GENERAL, overwrite: str = False) -> bool:
-        read = await self.container.database.read_one("SELECT * FROM notifications WHERE text = ?",(text,))
+    async def add(self, text: str, notification_type: NotificationType = NotificationType.GENERAL, overwrite: str = False) -> bool: # return notification object later
+        #read = await self.container.database.read_one("SELECT * FROM notifications WHERE text = ?", (text,))
 
         #if overwrite == False and (read.success and read.data != None): # allowing duplicates now
         #   vprint("Failed to add notification. Notification already exists.")
@@ -71,9 +72,9 @@ class Notifications:
         vprint("Error creating notification.", error=True)
         return False
     
-    async def remove(self, id: str) -> bool:
-        read: ReturnData = await self.container.database.write("SELECT * FROM notifications WHERE id = ?" (id,))
-        if not (read.success and read.data != None):
+    async def delete(self, id: int) -> bool:
+        read: ReturnData = await self.container.database.read_one("SELECT * FROM notifications WHERE id = ?", (id,))
+        if not (read.success and read.data is not None): # might be successful with no data
             vprint("Failed to remove notification. Notification does not exist.")
             return False
 
@@ -84,5 +85,16 @@ class Notifications:
         
         vprint("Failed to delete notification.", error=True)
         return False
+    
+    async def delete_by_string(self, string: str) -> bool:
+        found_notification: Notification | None = await self.get_notification_from_string(string)
+        if found_notification is not None:
+            success: bool = await self.delete(found_notification.id)
+            if success:
+                vprint("Successfully deleted notification by matching string.")
+            else:
+                vprint("Failed to delete notification by matching string. Unknown error.")
+        else:
+            vprint("Failed to delete notification by matching string. Notification not found.")
     
 

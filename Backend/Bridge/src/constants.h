@@ -1,7 +1,7 @@
 #define USB_BAUD 115200
 #define USB_BUFFER_SIZE 36
 #define USB_IDENTIFIER "tnn:" // passes node commands directly so use tnn instead of tnb
-#define USB_CONNECT_COMMAND "tnh:connect:\n"
+#define USB_CONNECT_COMMAND "tnh:ping:" // don't include \n
 
 #define DISPLAY_X 128
 #define DISPLAY_Y 64
