@@ -10,9 +10,15 @@
 #include <string>
 
 SX1276 radio = new Module(LORA_CS, LORA_IRQ, LORA_RST, -1);
-Bridge bridge;
+char received_buffer[256]; // 256 instead of 255. lora uses full 255 and needs a null terminator
+
+Bridge bridge(sizeof(received_buffer));
 DisplayClass display;
-uint8_t received_buffer[255];
+volatile bool data_received = false;
+
+void receive_callback() {
+    data_received = true;
+}
 
 void setup() {
     SPI.begin(LORA_SCK, LORA_MISO, LORA_MOSI, LORA_CS);
@@ -20,11 +26,13 @@ void setup() {
     display.setup();
     display.print("Starting bridge.");
 
+    pinMode(LED_PIN, OUTPUT);
+
     delay(1000); // wait for lora to start properly
 
     int state;
     while (true) {
-        state = radio.begin(868.0);
+        state = radio.begin(868.0, LORA_BW, LORA_SF, LORA_CR);
         if (state == RADIOLIB_ERR_NONE) { break; }
 
         display.print("LoRa module failed to connect. Retrying.");
@@ -32,28 +40,38 @@ void setup() {
     }
 
     display.print("LoRa module initialised successfully.");
-    radio.setOutputPower(LORA_POWER);
-
     display.print("Connecting to server.");
-    bridge.display = &display;
     bridge.setup();
-    display.print("Server connected successfully.");
+
+    display.update();
+
+    radio.setOutputPower(LORA_POWER);
+    radio.setDio0Action(receive_callback, RISING);
+    radio.startReceive();
+
+    //display.print("Server connected successfully.");
 }
 
 void loop() {
-    display.update();
-    bridge.ping(); // delete later, let bridge module handle it if input is "tnh:ping:""
+    if (data_received == true) {
+        data_received = false;
 
-    memset(received_buffer, 0, sizeof(received_buffer));
-    const uint16_t radio_state = radio.receive(received_buffer, sizeof(received_buffer));
+        if (DEBUG_MODE) {
+            digitalWrite(LED_PIN, HIGH);
+            delay(50);
+            digitalWrite(LED_PIN, LOW);
+        }
 
-    if (radio_state == RADIOLIB_ERR_NONE) {
+        display.update();
+
         const size_t packet_length = radio.getPacketLength();
-        const bool sent = bridge.send(received_buffer, packet_length);
+        radio.readData((uint8_t*)received_buffer, packet_length);
+        received_buffer[packet_length] = '\0';
+
+        const bool sent = bridge.send(received_buffer, packet_length + 1); // basic validation in bridge.send()
+
+        radio.startReceive();
     }
 
-    const char test[] = "tnn:111111111111:t-20h50b30"; // incoming lora commands should be in this format, perhaps change optional negative to 0 as in t020h
-    bridge.send((const uint8_t*)test, strlen(test));
-
-    delay(20000);
+    //delay(50); // lora commands will likely be 200ms each, needs to check often
 }

@@ -67,7 +67,7 @@ class NodePairing:
                     if not len(splitted) == 3: continue # needs to be identifier:command:data
                     if not splitted[1] == "tnn": continue
 
-                    vprint(f"Recieved command: '{selected}'")
+                    vprint(f"received command: '{selected}'")
                     self._lastSerial = time()
 
                     response: str | None = handle_command(splitted[2], splitted[3])

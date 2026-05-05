@@ -1,16 +1,19 @@
+# handles database creation and other useful functions
+# controlled by database.py
+
 from components.print import vprint
 from components.types import ReturnData
 
 class DatabaseUtils:
     table_info = {
-        "nodes": "hwid TEXT PRIMARY KEY, name TEXT NOT NULL DEFAULT 'Node', is_active INTEGER NOT NULL DEFAULT 1, last_seen INTEGER NOT NULL DEFAULT -1, signal_strength INTEGER NOT NULL DEFAULT -1, battery_power INTEGER NOT NULL DEFAULT -1, disabled INTEGER NOT NULL DEFAULT 0, debug INTEGER NOT NULL DEFAULT 0", 
-        "readings": "id INTEGER PRIMARY KEY AUTOINCREMENT, timestamp INTEGER NOT NULL, node_hwid INTEGER NOT NULL, temp REAL, hum REAL, FOREIGN KEY (node_hwid) REFERENCES nodes(hwid)",
-        "notifications": "id INTEGER PRIMARY KEY AUTOINCREMENT, text STRING NOT NULL, timestamp INTEGER NOT NULL, notification_type INTEGER NOT NULL, read INTEGER NOT NULL DEFAULT 0",
-        "thresholds": "id INTEGER PRIMARY KEY AUTOINCREMENT, type STRING NOT NULL, value INTEGER NOT NULL, active_alert INTEGER NOT NULL DEFAULT 0, last_trigger INTEGER NOT NULL, disabled INTEGER NOT NULL DEFAULT 0", # 1: 1, ">=", 25, timetamp, 0 
-        "sms": "id INTEGER PRIMARY KEY AUTOINCREMENT, threshold INTEGER NOT NULL, timestamp INTEGER NOT NULL, FOREIGN KEY (threshold) REFERENCES thresholds(id)"
+        "nodes": "hwid TEXT PRIMARY KEY, name TEXT NOT NULL DEFAULT 'Node', last_seen INTEGER NOT NULL DEFAULT -1, signal_strength INTEGER NOT NULL DEFAULT -1, battery_power INTEGER NOT NULL DEFAULT -1, disabled INTEGER NOT NULL DEFAULT 0, debug INTEGER NOT NULL DEFAULT 0", 
+        "readings": "id INTEGER PRIMARY KEY AUTOINCREMENT, timestamp INTEGER NOT NULL, node_hwid TEXT NOT NULL, temp REAL, hum REAL, FOREIGN KEY (node_hwid) REFERENCES nodes(hwid)",
+        "notifications": "id INTEGER PRIMARY KEY AUTOINCREMENT, text TEXT NOT NULL, timestamp INTEGER NOT NULL, notification_type INTEGER NOT NULL, read INTEGER NOT NULL DEFAULT 0",
+        "thresholds": "id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, threshold_type TEXT NOT NULL, value INTEGER NOT NULL, triggered INTEGER NOT NULL DEFAULT 0, last_trigger INTEGER NOT NULL DEFAULT -1, enabled INTEGER NOT NULL DEFAULT 1, active_notify_id INTEGER DEFAULT NULL, FOREIGN KEY (active_notify_id) REFERENCES notifications(id)", # 1: 1, ">=", 25, timetamp, 0
+        "logs": "timestamp INTEGER PRIMARY KEY",
+        "sms": "id INTEGER PRIMARY KEY AUTOINCREMENT, threshold INTEGER NOT NULL, timestamp INTEGER NOT NULL, FOREIGN KEY (threshold) REFERENCES thresholds(id)",
+        "settings": "key TEXT PRIMARY KEY, value TEXT"
     }
-
-    _debug_name = "debug_node_"
 
     def __init__(self, database):
         self.database = database
@@ -19,7 +22,7 @@ class DatabaseUtils:
         vprint("Checking database for existing data.")
         for table, table_schema in self.table_info.items():
             found: ReturnData = await self.database.read_one(f"SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table,))
-            if not found.success:
+            if not found.success or found.data is None:
                 vprint(f"Missing table detected: '{table}'.")
                 return False
             vprint(f"Found table '{table}'.")
@@ -49,10 +52,10 @@ class DatabaseUtils:
         if self.database.container.config.debug: # maybe just pass the container itself
             vprint("Inserting testing node information into database.")
             for i in range(self.database.container.config.debug_node_count):
-                temp_name = self._debug_name + str(i)
+                temp_name = "Node " + str(i + 1)
                 found: ReturnData = await self.database.read_one("SELECT name FROM nodes WHERE name=?", (temp_name,))
                 if found.success and found.data == None:
-                    written: ReturnData = await self.database.write("INSERT INTO nodes (hwid, name, is_active, debug) VALUES (?, ?, ?, ?)", (str(i + 1) * 8, temp_name, 1, 1))
+                    written: ReturnData = await self.database.write("INSERT INTO nodes (hwid, name, debug) VALUES (?, ?, ?)", (str(i + 1) * 12, temp_name, 1))
                     if written.success:
                         vprint(f"Created debug node '{temp_name}'.")
                     else:

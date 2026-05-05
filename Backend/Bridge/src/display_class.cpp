@@ -18,6 +18,7 @@ void DisplayClass::setup() {
     display.setTextColor(SSD1306_WHITE);
     display.setCursor(0, 0);
     display.setTextWrap(true);
+    display.setRotation(2);
     display.clearDisplay();
     display.display();
 }
@@ -50,10 +51,10 @@ void DisplayClass::update() {
     display.setTextSize(2);
     display.write("TN Server\n\n");
     
-    display.setTextSize(1);
-    display.write("Connected devices: 0\n");  // placeholders
-    display.write("Last update: 12:00\n");
-    display.write("CPU temperature: ?c");
+    //display.setTextSize(1);
+    //display.write("Connected devices: 0\n");  // placeholders
+    //display.write("Last update: 12:00\n");
+    //display.write("CPU temperature: ?c");
 
     display.display();
 }

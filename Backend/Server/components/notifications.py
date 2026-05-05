@@ -1,3 +1,5 @@
+# handles notifications and corresponding information
+
 from enum import Enum, auto
 from dataclasses import field, dataclass
 from time import time
@@ -54,23 +56,23 @@ class Notifications:
         vprint("Unable to update all notifications as read.")
         return False
     
-    async def add(self, text: str, notification_type: NotificationType = NotificationType.GENERAL, overwrite: str = False) -> bool: # return notification object later
-        #read = await self.container.database.read_one("SELECT * FROM notifications WHERE text = ?", (text,))
+    async def add(self, text: str, notification_type: NotificationType = NotificationType.GENERAL, overwrite: str = False) -> ReturnData:
+        read = await self.container.database.read_one("SELECT * FROM notifications WHERE text = ?", (text,))
 
-        #if overwrite == False and (read.success and read.data != None): # allowing duplicates now
-        #   vprint("Failed to add notification. Notification already exists.")
-        #   return False
+        if overwrite == False and (read.success and read.data != None): # allowing duplicates now
+           vprint("Failed to add notification. Notification already exists.")
+           return ReturnData()
         
         timestamp: int = time() # float should be converted to integer here
 
         #print(text, timestamp, notification_type)
-        write = await self.container.database.write("INSERT INTO notifications (text, timestamp, notification_type) values (?, ?, ?)", (text, timestamp, notification_type.value,))
+        write = await self.container.database.write("INSERT INTO notifications (text, timestamp, notification_type) VALUES (?, ?, ?) RETURNING id", (text, timestamp, notification_type.value,), True)
         if write.success:
             vprint("Successfully created notification.")
-            return True
+            return ReturnData(write.data[0], True)
 
         vprint("Error creating notification.", error=True)
-        return False
+        return ReturnData()
     
     async def delete(self, id: int) -> bool:
         read: ReturnData = await self.container.database.read_one("SELECT * FROM notifications WHERE id = ?", (id,))
@@ -85,6 +87,9 @@ class Notifications:
         
         vprint("Failed to delete notification.", error=True)
         return False
+    
+    async def delete_all() -> bool:
+        pass
     
     async def delete_by_string(self, string: str) -> bool:
         found_notification: Notification | None = await self.get_notification_from_string(string)

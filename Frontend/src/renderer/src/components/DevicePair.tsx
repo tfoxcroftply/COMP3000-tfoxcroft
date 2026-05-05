@@ -6,6 +6,7 @@ import { useContext, useEffect, useState } from "react"
 import useWebSocket, { ReadyState } from "react-use-websocket";
 
 import { ConnectionContext } from "../contexts/ConnectionHandler";
+import { RefreshContext } from "../contexts/RefreshHandler";
 
 import progressIcon from "../assets/icons/progress_activity_24dp_1F1F1F_FILL0_wght400_GRAD0_opsz24.svg"
 import closeIcon from "../assets/icons/close_24dp_1F1F1F_FILL0_wght400_GRAD0_opsz24.svg"
@@ -17,6 +18,7 @@ export default function DevicePair({ visible, closed } : { visible?: boolean, cl
 	const [messages, setMessages] = useState<string[]>([]);
 
 	const { connected, ip, getPath } = useContext(ConnectionContext);
+	const { refresh	} = useContext(RefreshContext)
 
 	const { sendMessage, lastMessage, readyState } = useWebSocket(websocketActive ? "ws://" + ip + ":8080" : null)
 
@@ -46,7 +48,11 @@ export default function DevicePair({ visible, closed } : { visible?: boolean, cl
 
 	useEffect(() => {
 		if (lastMessage !== null) {
-			// handle()
+			if (lastMessage.data === "refresh") {
+				setWebsocketActive(false);
+				refresh();
+				return;
+			}
 			addMessage(lastMessage.data);
 		}
 	},[lastMessage]) // add any incoming websocket messages to lock
@@ -79,7 +85,7 @@ export default function DevicePair({ visible, closed } : { visible?: boolean, cl
 					<img className="menu-button" src={closeIcon} />
 				</button>
 
-				<div className={"h-full w-full flex flex-col grow items-center justify-center mt-8 " + (websocketActive ? "hidden" : "visible")}>
+				<div className={"h-full w-full overflow-y-auto flex flex-col grow items-center justify-center mt-8 " + (websocketActive ? "hidden" : "visible")}>
 					<div className="space-y-4">
 						<h1 className="text-xl">Connecting to the server.</h1>
 						<div className="flex justify-center">
@@ -88,7 +94,7 @@ export default function DevicePair({ visible, closed } : { visible?: boolean, cl
 					</div>
 				</div>
 
-				<div className={"w-full h-full mt-14 bg-gray-100 rounded-2xl p-2 " + (websocketActive ? "visible" : "hidden")}>
+				<div className={"max-w-full w-full overflow-auto h-full mt-14 bg-gray-100 rounded-2xl p-2 " + (websocketActive ? "visible" : "hidden")}>
 					{messages.map((message, index) => (
 						<h1 key={index}>{message}</h1>
 					))}

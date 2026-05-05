@@ -1,10 +1,18 @@
-#define USB_BAUD 115200
+#define USB_BAUD 9600
 #define USB_BUFFER_SIZE 36
 #define USB_IDENTIFIER "tnn:" // passes node commands directly so use tnn instead of tnb
-#define USB_CONNECT_COMMAND "tnh:ping:" // don't include \n
+#define USB_CONNECT_COMMAND "tnh:ping:\n" // don't include \n
+#define SAMPLE_PAYLOAD "tnn:000000000000:t0000h000b00\n"
+
+#define DEBUG_MODE true
 
 #define DISPLAY_X 128
 #define DISPLAY_Y 64
+
+#define LED_PIN 25
+
+#define UART_RX 13
+#define UART_TX 17
 
 #define OLED_SCL 15
 #define OLED_SDA 4
@@ -18,6 +26,10 @@
 #define LORA_MOSI 27
 #define LORA_RST 14
 
-#define LORA_POWER 2
-#define LORA_SF 9 // test this later
-#define LORA_PAYLOAD_LENGTH 32 // should be enough
+// lora settings
+#define LORA_POWER 14
+#define LORA_PAYLOAD_SIZE 31 // not including preabmle
+#define LORA_SF 9 // spreading factor
+#define LORA_BW (float)125.0 // bandwidth in khz
+#define LORA_PA 8 // preamble length, default 8
+#define LORA_CR 6 // code rate, 4/?

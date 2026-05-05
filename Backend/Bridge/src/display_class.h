@@ -13,7 +13,6 @@ class DisplayClass {
         void clear();
         void update();
 
-        uint8_t strength = -1;
     private:
         Adafruit_SSD1306 display;
         bool running = false;

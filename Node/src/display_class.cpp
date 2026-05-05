@@ -23,9 +23,8 @@ void DisplayClass::setup() {
 }
 
 void DisplayClass::end() {
-    // look into disabling display somehow
+    // not used and untested
     clear();
-
     Wire.end();
 }
 

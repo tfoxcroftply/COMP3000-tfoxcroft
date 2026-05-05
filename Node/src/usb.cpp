@@ -2,54 +2,45 @@
 
 #include "constants.h"
 #include "read_buffer.h"
+#include "display_class.h"
+#include "utils.h"
 
 #include <Arduino.h>
 #include <cstring>
 
-USBMode::USBMode(DisplayClass* input_display) : read_buffer(SERIAL_BUFFER_SIZE) {
-    display = input_display;
-};
+USBMode::USBMode() : read_buffer(SERIAL_BUFFER_SIZE) {};
 
 void USBMode::send_pair_command() {
-    // could reuse read_buffer.cpp later
     // format "tnn:111111111111:pair"
 
-    char pair_command[23]; // 4 + 5 + 12 + 1 = 22
-    char mac[13]; // 12 bytes (ignoring null)
+    char pair_command[23];
+    const char* mac_address = Utils::get_mac_address();
 
-    char identifier[] = "tnn:"; // 4 bytes (ignoring null)
-    char command[] = ":pair"; // 5 bytes (ignoring null)
-
-    uint64_t mac_bytes = ESP.getEfuseMac(); // get mac
-    sprintf(mac, "%012llX", mac_bytes); // useful doc https://www.ibm.com/docs/en/zos/3.1.0?topic=programs-sprintf-format-write-data
-    //mac[12] = '\0'; snprintf should handle null terminator
-
-    strcpy(pair_command, identifier); // add identifier
-    strcat(pair_command, mac); // add mac
-    strcat(pair_command, command); // add command
-    strcat(pair_command, "\n"); // newline
+    snprintf(pair_command, 
+        sizeof(pair_command),
+        "%4s%12s%5s",
+        "tnn:", // 4
+        mac_address, // 12
+        ":pair", // 5
+        "\n" // 1 = 22 + \0 = 23
+    );
 
     Serial.write(pair_command); // send pair command
-
-    // verify if it has been recieved
-
     return;
 }
 
 bool USBMode::start() {
     if (running) { return false; };
 
-    read_buffer = ReadBuffer(SERIAL_BUFFER_SIZE);
-
     Serial.begin(115200); // start serial
-    Serial.setDebugOutput(false);
+    Serial.setDebugOutput(false); // seems to not change much
 
     uint32_t time = millis(); // returns unsigned long but uint32_t should be the same
 
-    while (millis() - time < PAIR_TIME * 1000) {
+    while (millis() - time < SERIAL_DETECT_TIME * 1000) {
         while (Serial.available() > 0) {
             if (!hasRun) {
-                display->print("USB detected. Ensure hub is in pairing mode.");
+                //display->print("USB detected. Ensure hub is in pairing mode.");
                 hasRun = true;
             }
 
@@ -60,6 +51,7 @@ bool USBMode::start() {
                 paired = handle_command();
                 read_buffer.clear();
                 if (paired == true) {
+                    Serial.end(); // may trigger esp restart
                     return true;
                 }
             }
@@ -67,15 +59,12 @@ bool USBMode::start() {
         delay(1000);
     }
 
+    Serial.end(); // also may restart the esp, check later
     return false;
 }
 
 bool USBMode::handle_command() {
     //display->clear();
-
-    //char read_buffer_copy[SERIAL_BUFFER_SIZE + 1]; // make copy
-    //memcpy(read_buffer_copy, read_buffer.read(), sizeof(read_buffer_copy)); // copy useful part, change to strcpy if reused
-    //display->print(read_buffer_copy);
 
     // tnh:connect:
     if (read_buffer.has("tnh:paired:\n")) { 
@@ -83,13 +72,12 @@ bool USBMode::handle_command() {
      }
 
     if (read_buffer.has("tnh:connect:\n")) { 
-        digitalWrite(LED_PIN, HIGH);
         send_pair_command();
     }
 
     return false; 
 
-    // old code from a modular command handler
+    // old code from a modular command handler - untested
     //size_t index = strcspn(read_buffer.read(), "tnh:"); // get index
     //char read_buffer_copy[SERIAL_BUFFER_SIZE + 1]; // make copy
     //memcpy(read_buffer_copy, read_buffer_copy + index, sizeof(read_buffer_copy) - 1); // copy useful part   

@@ -12,6 +12,7 @@ from time import time
 from components.serial import NodeSerial
 from components.print import vprint
 from components.types import ReturnData, NodeSerialData
+from components.host_utils import is_host
 
 class NodePair:
     def __init__(self, container):
@@ -19,8 +20,8 @@ class NodePair:
         self._websocket_active: bool = False
         self._websocket = None
         self._pairing_active: bool = False # needs a check because multiple instances of the websocket handler can spawn
-        self._serial = NodeSerial(container)
-        self._serial.start(self.container.config.usb_port, "tnn")
+        self._serial = NodeSerial(container, self.container.config.usb_baud, self.container.config.usb_port)
+        self._serial.start("tnn")
         self._last_activity: int = -1
 
     async def _pairing_sequence(self, websocket):
@@ -37,13 +38,13 @@ class NodePair:
                 self._serial.send_command("tnh:connect:\n")
                 data: NodeSerialData | None = self._serial.receive_command()
                 if data:
-                    await websocket.send("Recieved node pairing information.")
+                    await websocket.send("Received node pairing information.")
                     self._serial.send_command("tnh:paired:\n")
 
                     added: ReturnData = await self.container.node_manager.add_node(data.command)
                     if added.success:
-                        await websocket.send("Successfully paired node. Refreshing in 5 seconds.")
-                        await sleep(5)
+                        await websocket.send("Successfully paired node.")
+                        await sleep(2)
                         await websocket.send("refresh")
                     else:
                         error: str = f"Unable to pair to node. {"Error unknown." if added.data is None else added.data}"
@@ -80,7 +81,7 @@ class NodePair:
             self._serial.message_list = []
             self._last_activity = time()
 
-            self._websocket = await websockets.serve(handler=self._pairing_sequence, host="127.0.0.1", port=self.container.config.websocket_port, origins=["http://localhost:5173"])
+            self._websocket = await websockets.serve(handler=self._pairing_sequence, host="0.0.0.0", port=self.container.config.websocket_port, origins=["http://localhost:5173"])
             vprint("Websocket listening.")
 
             try:

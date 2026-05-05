@@ -63,7 +63,7 @@ class NodeSerial:
 
     async def receive_commmand(self, specific: str | None = None, timeout: int = 1, _starting: bool = False) -> ReturnData:
         if not _starting and not self._serial_active:
-            vprint("Unable to recieve serial commands. Serial is not active.", error=True)
+            vprint("Unable to receive serial commands. Serial is not active.", error=True)
             return ReturnData()
         
         try:

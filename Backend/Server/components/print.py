@@ -1,4 +1,5 @@
-# probably needs a rewrite
+# custom module from last project to introduce better looking prints
+# a built in logging functionality was removed
 
 import os
 import threading
@@ -9,9 +10,16 @@ from components.types import PrintType, _Config
 start_print_string = ""
 last_calling_thread = None
 has_printed = False
+disabled = False
 config = _Config()
 
+def disable_print():
+    global disabled
+    disabled = True
+
 def vprint(input: str | None, force: bool = False, error: bool = False) -> None:
+    if disabled: return
+
     global last_calling_thread
 
     if input == None: # redo checks

@@ -4,7 +4,7 @@
 
 #include <Arduino.h>
 
-ReadBuffer::ReadBuffer(uint8_t buffer_size) {
+ReadBuffer::ReadBuffer(uint16_t buffer_size) {
     read_buffer_size = buffer_size;
     read_buffer = new char[read_buffer_size];
     clean();
@@ -18,7 +18,7 @@ void ReadBuffer::clean() {
 
 // update read buffer
 void ReadBuffer::append(const char input_byte) {
-    if (input_byte == '\0' || input_byte == '\n') { return; }
+    if (input_byte == '\0') { return; }
 
     // shift bytes left if buffer is already full
     if (read_buffer_index >= read_buffer_size - 1) {

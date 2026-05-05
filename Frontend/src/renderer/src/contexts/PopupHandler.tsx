@@ -1,5 +1,6 @@
-import Popup from "@renderer/components/Popup";
 import { createContext, useState } from "react";
+
+import Popup from "@renderer/components/Popup";
 
 type PopupContextType = {
     showPopup: (text: string, callback?: () => void) => void,
@@ -19,7 +20,6 @@ export function PopupHandler({children}: {children: React.ReactNode}) {
 
 
     const showPopup = function(text: string, callback?: () => void) {
-        console.log("test") // debug
         setText(text);
         setCurrentCallback(callback);
         setShow(true)

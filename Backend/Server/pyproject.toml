@@ -5,14 +5,23 @@ description = ""
 authors = [
     {name = "tfoxcroftply"}
 ]
-requires-python = ">=3.10,<4.0"
+requires-python = ">=3.13,<4.0"
 dependencies = [
-    "pyserial (>=3.5,<4.0)",
-    "python-gsmmodem (>=0.9,<0.10)",
     "fastapi[standard] (>=0.128.0,<0.129.0)",
-
+    "pigpio (>=1.78,<2.0)",
+    "watchdog (>=6.0.0,<7.0.0)",
+    "pytest (>=9.0.3,<10.0.0)",
+    "pyserial (>=3.5,<4.0)",
+    "pytest-asyncio (>=1.3.0,<2.0.0)",
+    "requests (>=2.33.1,<3.0.0)",
 ]
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    "ignore::pytest.PytestAssertRewriteWarning"
+]
+asyncio_mode = "auto"

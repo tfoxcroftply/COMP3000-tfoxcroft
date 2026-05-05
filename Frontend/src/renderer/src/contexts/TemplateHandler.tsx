@@ -1,5 +1,4 @@
-// template (not proper code)
-// i keep forgetting how to make it
+// template (example code)
 // use https://reactpractice.dev/articles/react-context-example-with-typescript/
 
 import { createContext, useState } from "react";

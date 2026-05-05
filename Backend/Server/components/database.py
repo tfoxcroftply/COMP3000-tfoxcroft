@@ -1,4 +1,6 @@
-# rewritten - not tested yet
+# database handler
+# my implementation using a queue, a single worker, and relying on async support
+
 from __future__ import annotations
 
 import sqlite3
@@ -21,6 +23,7 @@ class _WriteData:
     query: str
     params: Sequence[Any] | None = None
     task: DatabaseTask | None = None
+    returning: bool = False
 
 @dataclass(frozen=True, slots=True)
 class _QueueData:
@@ -46,8 +49,12 @@ class _Queue: # maybe add stop function
                 
                 if queue_data.write_data.task == DatabaseTask.WRITE:
                     self.cursor.execute(queue_data.write_data.query, queue_data.write_data.params or ())
-                    self.connection.commit()
+                    
+                    return_data = None
+                    if queue_data.write_data.returning:
+                        return_data = self.cursor.fetchone()
 
+                    self.connection.commit()
                     changes = self.connection.total_changes
                     changed_by = changes - self._total_changes
 
@@ -58,9 +65,10 @@ class _Queue: # maybe add stop function
 
                     self._total_changes = changes
 
-                    queue_data.future.set_result(ReturnData(success=True))
+                    queue_data.future.set_result(ReturnData(return_data, True))
 
                 elif queue_data.write_data.task == DatabaseTask.READ_ONE:
+                    #print(queue_data)
                     self.cursor.execute(queue_data.write_data.query, queue_data.write_data.params or ())
                     found = self.cursor.fetchone()
 
@@ -88,13 +96,13 @@ class _Queue: # maybe add stop function
             self._running = True
             asyncio.create_task(self._loop())
 
-    async def schedule(self, query: str, params: Sequence[Any] | None = None, task: DatabaseTask | None = None) -> ReturnData:
+    async def schedule(self, query: str, params: Sequence[Any] | None = None, task: DatabaseTask | None = None, returning: bool = False) -> ReturnData:
         await self._start()
         
         loop = asyncio.get_running_loop()
         temp_future = loop.create_future()
         
-        await self.queue.put(_QueueData(_WriteData(query, params, task), temp_future))
+        await self.queue.put(_QueueData(_WriteData(query, params, task, returning), temp_future))
         return await temp_future
 
 class Database:
@@ -171,11 +179,11 @@ class Database:
         vprint("Database command failed: database is not running.", error=True)
         return False
     
-    async def write(self, query: str, params: Sequence[Any] | None = None) -> ReturnData:
+    async def write(self, query: str, params: Sequence[Any] | None = None, returning: bool = False) -> ReturnData:
         query = query.strip()
         if not (self._check_started() and query != ""): return ReturnData()
 
-        data: ReturnData = await self.queue.schedule(query, params, DatabaseTask.WRITE)
+        data: ReturnData = await self.queue.schedule(query, params, DatabaseTask.WRITE, returning)
 
         return data or ReturnData()
 
@@ -192,9 +200,3 @@ class Database:
 
         data: ReturnData = await self.queue.schedule(query, params, DatabaseTask.READ_ALL)
         return data or ReturnData()
-
-    def delete_one(self, query: str, params: Sequence[Any] | None) -> ReturnData: # probably can remove, just use write()
-        query = query.strip()
-        if not (self._check_started() and query != ""): return ReturnData()
-
-        return ReturnData()

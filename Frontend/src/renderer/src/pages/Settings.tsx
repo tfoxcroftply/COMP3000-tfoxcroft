@@ -1,27 +1,20 @@
-import { useContext } from "react";
-import { PopupContext } from "../contexts/PopupHandler";
+import { useNavigate } from "react-router-dom";
 
 export default function Settings() {
-
-	const { showPopup } = useContext(PopupContext);
-
-	const updateTime = function() {
-		console.log("Updating device time.");
-		// trigger refresh when loading logic comes
-	}
+	const navigate = useNavigate();
 
 	return (
-		<div className="flex flex-col space-y-3 mx-auto w-[80vw]">
-			<div className="h-20 border-b border-(--outline-colour)">
-				<div className="h-18 flex items-center justify-between">
-					<h1 className="text-xl">Update device time</h1>
-					<h1 className="button-entry-style clickable h-12 flex flex-col justify-center pl-4 pr-4" onClick={() => showPopup("Are you sure you want to update the device time? If incorrect, it may cause signfiicant data issues.", () => updateTime)}>Update</h1>
+		<div className="flex flex-col space-y-2 centre-page-container">
+			<div className="settings-entry">
+				<div className="settings-entry-container">
+					<h1 className="settings-entry-container-title">SMS settings</h1>
+					<h1 className="button-entry-style clickable h-12 w-24 text-center flex flex-col justify-center pl-4 pr-4" onClick={() => navigate("/settings/sms")}>View</h1>
 				</div>
 			</div>
-			<div className="h-20 border-b border-(--outline-colour)">
-				<div className="h-18 flex items-center justify-between">
-					<h1 className="text-xl">Update phone number</h1>
-					<h1 className="button-entry-style clickable h-12 flex flex-col justify-center pl-4 pr-4" onClick={() => showPopup("Are you sure you want to update the stored phone number?", () => updateTime)}>Update</h1>
+			<div className="settings-entry border-none">
+				<div className="settings-entry-container">
+					<h1 className="settings-entry-container-title">System settings</h1>
+					<h1 className="button-entry-style clickable h-12 w-24 text-center flex flex-col justify-center pl-4 pr-4" onClick={() => navigate("/settings/system")}>View</h1>
 				</div>
 			</div>
 		</div>

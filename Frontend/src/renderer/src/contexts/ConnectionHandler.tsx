@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, useRef } from "react";
+
 import { delay } from "../components/Utils"
 
 type ConnectionContextType = {
@@ -67,9 +68,13 @@ export function ConnectionHandler({children}: {children: React.ReactNode}) {
 
     },[healthChecking, ip, started])
 
+
     const start = async function() {
+        const tempDevMode = await window.electron.isDev()
+        setDevMode(tempDevMode)
+
         while (true) {
-            const foundIp = await window.electron.discover();
+            const foundIp = "temperaturenet.local" //await window.electron.discover();
 
             if (foundIp !== null) {
                 setIp(foundIp);
@@ -85,7 +90,7 @@ export function ConnectionHandler({children}: {children: React.ReactNode}) {
         }
     }
 
-    const startConnection = function() {
+    const startConnection = async function() {
         if (!started) {
             setStarted(true);
             start();

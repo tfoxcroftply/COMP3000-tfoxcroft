@@ -1,11 +1,13 @@
 import { useEffect, useState, useRef, useContext } from "react"
+import { useNavigate } from "react-router-dom"
 
 import { ConnectionContext } from "../contexts/ConnectionHandler"
 
 import loadingIcon from "../assets/icons/progress_activity_24dp_FFFFFF_FILL0_wght400_GRAD0_opsz24.svg"
-import { useNavigate } from "react-router-dom"
 
 export default function Connection() {
+	//return; // debug
+
 	const navigate = useNavigate()
 
 	const { connected, devMode, ip } = useContext(ConnectionContext)
@@ -13,9 +15,7 @@ export default function Connection() {
 
 	return (
 		<>
-			<div className="fixed z-50">
-				<h1 className="fixed bottom-2 right-2 leading-none pointer-events-none font-bold">{ip + " | Dev mode"}</h1>
-			</div>
+
 			<div className={"*:z-50 inset-0 " + (connected ? "hidden" : "")}>
 				<div className="fixed inset-0 flex flex-col justify-center space-y-2 bg-black/50">
 					<h1 className="text-3xl text-center text-white" >Disconnected</h1>
@@ -31,3 +31,7 @@ export default function Connection() {
 		</>
 	)
 }
+
+//			<div className="fixed z-50">
+//				<h1 className="fixed bottom-2 right-2 leading-none pointer-events-none opacity-20">{ip + " | Dev mode"}</h1>
+//			</div>

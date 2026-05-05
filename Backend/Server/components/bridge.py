@@ -1,4 +1,4 @@
-# for connecting pi to lora esp32
+# for connecting the raspberry pi to lora esp32 bridge
 # managed by node_connection.py
 
 from asyncio import sleep, CancelledError, create_task, Task, gather
@@ -8,14 +8,17 @@ from time import time
 from components.print import vprint
 from components.serial import NodeSerial
 from components.types import NotificationType, DataBlock, NodeSerialData
+from components.host_utils import is_host
 
 class Bridge:
     def __init__(self, container):
         self.container = container
-        self.serial = NodeSerial(container)
+        use_host_info = is_host()
+        self.serial = NodeSerial(container, self.container.config.usb_baud if not use_host_info else self.container.config.bridge_baud, self.container.config.bridge_port if not use_host_info else self.container.config.bridge_gpio, use_software_serial=use_host_info)
         self._started: bool = False
         self._collection: list[DataBlock] = []
         self._current_loop: Task | None = None
+        self._disconnected_notif_id: int | None = None
 
     def read_collection(self) -> list[DataBlock]:
         collection = self._collection
@@ -30,7 +33,7 @@ class Bridge:
         # old bad regex t-?[0-9]+h[0-9]+b[0-9]+
         # t-?(\d+)h(\d+)b(\d+) perhaps replace - with 0 for positive values for fixed payload size
 
-        found = search("t-?(\\d+)h(\\d+)b(\\d+)", input)
+        found = search("t(-?\\d+)h(\\d+)b(\\d+)", input) # fixed deprecation and moved negative sign into capture group
         if found is None: return None
 
         collection = found.groups()
@@ -40,7 +43,7 @@ class Bridge:
 
         #print(collection)
 
-        return DataBlock(int(time()), collection[0], collection[1], hwid) # time will probably be ignored
+        return DataBlock(int(time()), float(collection[0]) / 10, float(collection[1]) / 10, hwid) # time will probably be ignored
     
     async def _loop(self): # linked to self._started
         try:
@@ -52,23 +55,21 @@ class Bridge:
 
                 data: NodeSerialData = self.serial.receive_command()
 
-                if data is None or not data.command.isdigit(): continue
+                if data is None: continue
 
                 parsed_data: DataBlock | None = self._parse_readings(data.command, data.data)
-                if not parsed_data: 
+                if parsed_data is None: 
                     vprint("Node readings discarded due to invalid data.")
                     continue
 
                 for index, entry in enumerate(self._collection):
                     if entry.node_hwid == parsed_data.node_hwid:
-                        vprint("Replacing existing readings in bridge command buffer with newer data.")
+                        vprint("Replacing existing reading in bridge command buffer with newer data.")
                         self._collection[index] = parsed_data
                         break
                 else:
                     vprint("Storing node readings in bridge buffer.")
                     self._collection.append(parsed_data)
-
-
 
 
         except CancelledError:
@@ -85,7 +86,7 @@ class Bridge:
     async def start(self, timeout: int | None = None) -> bool:
         vprint("Bridge module starting.")
 
-        self.serial.start(self.container.config.bridge_port, "tnn") # changed from tnb to tnn
+        self.serial.start("tnn") # changed from tnb to tnn
 
         for i in range(self.container.config.bridge_start_retries):
             if self.serial.connect():
@@ -97,11 +98,11 @@ class Bridge:
 
             await sleep(1)
         
-        await self.container.notifications.add("Bridge failed to connect!", NotificationType.ERROR)
+        self._disconnected_notif_id = await self.container.notifications.add("Bridge failed to connect!", NotificationType.ERROR)
         return False
         
     def is_connected(self) -> bool:
-        return self.serial.serial.is_open # maybe add a better check inside serial.py
+        return self.serial.serial.is_open() # maybe add a better check inside serial.py
         
     async def _check_status(self) -> bool:
         if not (self._started and self.serial.is_serial_active()):

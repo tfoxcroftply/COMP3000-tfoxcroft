@@ -3,13 +3,14 @@
 #include "constants.h"
 #include "read_buffer.h"
 #include "display_class.h"
+#include "utils.h"
 
 #include <Arduino.h>
 #include <cstring>
 
 class USBMode {
     public:
-        USBMode(DisplayClass* input_display);
+        USBMode();
         bool start();
 
     private:

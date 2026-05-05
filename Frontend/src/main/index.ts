@@ -4,9 +4,8 @@ import { is } from "@electron-toolkit/utils"
 import { Bonjour } from "bonjour-service"
 
 // variables
-const forceConnection = false; // forces device search in dev mode
+const forceConnection = true; // forces device search in dev mode
 const discoveryTimeout = 30; // seconds
-
 
 const bonjour = new Bonjour();
 
@@ -15,6 +14,7 @@ const createWindow = () => {
 		width: 960,
 		height: 720,
 		resizable: false,
+		title: "temperaturenet",
 		webPreferences: {
 			nodeIntegration: false,
 			contextIsolation: true,
@@ -39,13 +39,15 @@ ipcMain.handle("connectionDiscover",() => {
 		}
 
 		const search = bonjour.find({type: "tftemperaturenet"} as any, service => {
-			console.log(service); // temporary debug print
+			console.log(service)
+
+			search.stop()
+			resolve("temperaturenet.local")
 		});
 		
 		setTimeout(() => {
 			search.stop();
 			resolve(null);
-			return;
 		}, discoveryTimeout * 1000);
 	})
 })

@@ -27,6 +27,9 @@
 	.clickable {
 		@apply p-2 cursor-pointer transition-shadow duration-100 shadow-sm hover:shadow-md *:pointer-events-none pointer-events-auto;
 	}
+	.editable {
+		@apply cursor-text;
+	}
 	.menu-button-container {
 		@apply rounded-full bg-white outline-2 outline-(--outline-colour);
 	}
@@ -34,10 +37,10 @@
 		@apply h-fit mb-px;
 	}
 	.button-entry {
-		@apply h-14 p-3 w-full cursor-pointer flex space-x-2 overflow-hidden;
+		@apply h-14 p-3 w-full cursor-pointer flex space-x-2 overflow-hidden shrink-0;
 	}
 	.button-entry-style {
-		@apply rounded-2xl outline-2 outline-(--outline-colour);
+		@apply rounded-2xl outline-2 outline-(--outline-colour) bg-white select-none;
 	}
 	.button-icon-container {
 		@apply h-full w-auto flex flex-col justify-center;
@@ -50,5 +53,26 @@
 	}
 	.button-text {
 		@apply text-xl leading-none;
+	}
+	.button-entry-style-error {
+		@apply outline-(--colour-red);
+	}
+	.centre-page-container {
+		@apply mx-auto w-[80vw] overflow-y-auto max-h-136 p-0.5;
+	}
+	.settings-entry {
+		@apply h-20 border-b border-(--outline-colour)
+	}
+	.settings-entry-container {
+		@apply h-full pl-4 pr-4 flex items-center justify-between;
+	}
+	.settings-entry-container-title {
+		@apply text-xl;
+	}
+	.overlay-colour {
+		@apply bg-white/80 backdrop-blur-[2px];
+	}
+	.inactive-box {
+		@apply text-gray-500 bg-gray-50;
 	}
 }
